@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.IntentFilter;
@@ -18,28 +19,29 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.ConnectivityManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.ColorInt;
-import android.support.annotation.DimenRes;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
-import android.support.constraint.ConstraintLayout;
-import android.support.constraint.Guideline;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
-import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
-import android.support.v4.view.ViewCompat;
-import android.support.v7.app.AppCompatDelegate;
-import android.support.v7.widget.AppCompatButton;
-import android.support.v7.widget.AppCompatImageView;
-import android.support.v7.widget.AppCompatTextView;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.DimenRes;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.AppCompatButton;
+import androidx.appcompat.widget.AppCompatImageView;
+import androidx.appcompat.widget.AppCompatTextView;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.Guideline;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.RoundedBitmapDrawable;
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
+import androidx.core.view.ViewCompat;
+import androidx.fragment.app.Fragment;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -127,13 +129,17 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
     private ObjectAnimator wifiAnimator;
     private ConnectionCallback connectionCallback;
 
-    private NoInternetDialog(@NonNull Context context, int bgGradientStart, int bgGradientCenter, int bgGradientEnd,
+    private Activity activity;
+
+    private NoInternetDialog(@NonNull Activity activity, int bgGradientStart, int bgGradientCenter, int bgGradientEnd,
                              int bgGradientOrientation, int bgGradientType, float dialogRadius,
                              @Nullable Typeface titleTypeface, @Nullable Typeface messageTypeface,
                              int buttonColor, int buttonTextColor, int buttonIconsColor, int wifiLoaderColor,
                              boolean cancelable) {
-        super(context);
+        super(activity);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
+
+        this.activity = activity;
 
         isHalloween = NoInternetUtils.getCurrentDate().equals("10-31");
 
@@ -178,7 +184,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
 
         this.cancelable = cancelable;
 
-        initReceivers(context);
+        initReceivers(activity);
     }
 
     private void initReceivers(Context context) {
@@ -566,7 +572,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
 
     @Override
     public void hasActiveConnection(boolean hasActiveConnection) {
-        if(this.connectionCallback != null)
+        if (this.connectionCallback != null)
             this.connectionCallback.hasActiveConnection(hasActiveConnection);
         if (!hasActiveConnection) {
             showDialog();
@@ -577,8 +583,12 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
 
     @Override
     public void show() {
-        super.show();
-        startFlight();
+        if (!activity.isFinishing()) {
+
+            super.show();
+            startFlight();
+
+        }
     }
 
     public void showDialog() {
@@ -631,10 +641,12 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
     public void onDestroy() {
         try {
             getContext().unregisterReceiver(networkStatusReceiver);
-        }catch(Exception e){ }
+        } catch (Exception e) {
+        }
         try {
             getContext().unregisterReceiver(wifiReceiver);
-        }catch (Exception e){}
+        } catch (Exception e) {
+        }
     }
 
     public void setConnectionCallback(ConnectionCallback connectionCallback) {
@@ -642,7 +654,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
     }
 
     public static class Builder {
-        private Context context;
+        private Activity activity;
         private int bgGradientStart;
         private int bgGradientCenter;
         private int bgGradientEnd;
@@ -658,17 +670,17 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
         private ConnectionCallback connectionCallback;
         private boolean cancelable;
 
-        public Builder(Context context) {
-            this.context = context;
+        public Builder(Activity activity) {
+            this.activity = activity;
         }
 
         public Builder(Fragment fragment) {
-            this.context = fragment.getContext();
+            this.activity = fragment.getActivity();
         }
 
         @RequiresApi(api = Build.VERSION_CODES.M)
         public Builder(android.app.Fragment fragment) {
-            this.context = fragment.getContext();
+            this.activity = fragment.getActivity();
         }
 
         public Builder setBgGradientStart(@ColorInt int bgGradientStart) {
@@ -702,7 +714,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
         }
 
         public Builder setDialogRadius(@DimenRes int dialogRadiusDimen) {
-            this.dialogRadius = context.getResources().getDimensionPixelSize(dialogRadiusDimen);
+            this.dialogRadius = activity.getResources().getDimensionPixelSize(dialogRadiusDimen);
             return this;
         }
 
@@ -713,7 +725,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         public Builder setTitleTypeface(int titleTypefaceId) {
-            this.titleTypeface = context.getResources().getFont(titleTypefaceId);
+            this.titleTypeface = activity.getResources().getFont(titleTypefaceId);
             return this;
         }
 
@@ -724,7 +736,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         public Builder setMessageTypeface(int messageTypefaceId) {
-            this.messageTypeface = context.getResources().getFont(messageTypefaceId);
+            this.messageTypeface = activity.getResources().getFont(messageTypefaceId);
             return this;
         }
 
@@ -759,7 +771,7 @@ public class NoInternetDialog extends Dialog implements View.OnClickListener, Co
         }
 
         public NoInternetDialog build() {
-            NoInternetDialog dialog = new NoInternetDialog(context, bgGradientStart, bgGradientCenter, bgGradientEnd,
+            NoInternetDialog dialog = new NoInternetDialog(activity, bgGradientStart, bgGradientCenter, bgGradientEnd,
                     bgGradientOrientation, bgGradientType, dialogRadius, titleTypeface, messageTypeface,
                     buttonColor, buttonTextColor, buttonIconsColor, wifiLoaderColor, cancelable);
             dialog.setConnectionCallback(connectionCallback);
